@@ -9,13 +9,8 @@ class PayTechParser(BaseBankParser):
         parts=line.split('#')
         date=parts[0][:8]
         date = datetime.strptime(date, "%Y%m%d")
-        print(date)
         amount=float(parts[0][8:].replace(',','.'))
         reference=parts[1]
-        # existing_transaction = await db_instance.db.transactions.find_one({"reference": reference})
-        # if existing_transaction is not None:
-        #     print(f"Duplicate found: {reference}")
-        #     return None
         metadata_parts=parts[2]
         metadata_parts=metadata_parts.split('/')
         meta_data={}
@@ -24,6 +19,7 @@ class PayTechParser(BaseBankParser):
             value=metadata_parts[i+1]
             meta_data[key]=value
         transaction_data = {
+            "client_id": "Dummy",
             "amount": amount,
             "reference": reference,
             "date": date,
