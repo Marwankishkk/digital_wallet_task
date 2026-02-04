@@ -1,12 +1,15 @@
 from .base import BaseBankParser
 from core.database import db_instance
 from pymongo.errors import DuplicateKeyError
+from datetime import datetime
 
 class PayTechParser(BaseBankParser):
     async def  parse(self, line):
         # Example implementation for PayTech transaction parsing
         parts=line.split('#')
         date=parts[0][:8]
+        date = datetime.strptime(date, "%Y%m%d")
+        print(date)
         amount=float(parts[0][8:].replace(',','.'))
         reference=parts[1]
         # existing_transaction = await db_instance.db.transactions.find_one({"reference": reference})
