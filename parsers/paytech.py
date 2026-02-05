@@ -26,10 +26,11 @@ class PayTechParser(BaseBankParser):
             "bank": "PayTech",
             "metadata": meta_data
         }
-   
         try:
+            
             result = await db_instance.db.transactions.insert_one(transaction_data)
             print(result.inserted_id)
+            print(transaction_data)
             return transaction_data
 
         except DuplicateKeyError:
