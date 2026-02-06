@@ -2,8 +2,9 @@
 import asyncio
 from celery import Celery
 from celery.signals import worker_process_init
-from core.database import db_instance, connect_to_mongo  
+from core.database import connect_to_mongo  
 from parsers import get_parser
+from services.transaction_service import TransactionService
 
 # Initialize Celery app with Redis as the message broker
 app = Celery('webhook_tasks', broker='redis://localhost:6379/0')
@@ -55,9 +56,9 @@ async def handle_parsing(data, request_id, bank_name="paytech"):
         bank_name: Name of the bank to determine which parser to use
     """
     lines = [line.strip() for line in data.splitlines() if line.strip()]
-    
     # Get the appropriate parser for the bank
     try:
+        print(bank_name)
         parser = get_parser(bank_name)
     except ValueError as e:
         print(f"Task {request_id} - {e}")
@@ -66,14 +67,19 @@ async def handle_parsing(data, request_id, bank_name="paytech"):
     results = []
     for line in lines:
         try:
-            # The parser can now perform insert_one safely since DB is initialized
+            # Step 1: Parse the line (returns Transaction object)
             transaction = await parser.parse(line)
-            if transaction:
+            
+            # Step 2: Save to database via service layer
+            saved_transaction = await TransactionService.save_transaction(transaction)
+            
+            if saved_transaction:
                 print(f"Task {request_id} - Processed line: {line[:30]}...")
                 # Extracting ID to confirm successful database insertion
-                results.append(str(transaction.get('_id', 'inserted')))
+                results.append(str(saved_transaction.get('_id', 'inserted')))
             else:
-                print(f"Task {request_id} - Line parsed as None: {line[:30]}...")
+                print(f"Task {request_id} - Duplicate transaction skipped: {line[:30]}...")
+                
         except Exception as e:
             # Catching errors per line to prevent the entire worker from crashing
             print(f"Task {request_id} - Error parsing line: {e}")
